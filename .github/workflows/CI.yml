@@ -1,0 +1,32 @@
+on: [push, pull_request]
+
+name: CI
+
+jobs:
+  build:
+    name: Test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        python-version: [3.7]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Checkout submodules
+        shell: bash
+        run: |
+            auth_header="$(git config --local --get http.https://github.com/.extraheader)"
+            git submodule sync --recursive
+            git -c "http.extraheader=$auth_header" -c protocol.version=2 submodule update --init --force --recursive --depth=1
+      - name: Set up Python
+        uses: actions/setup-python@v1
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Display Python version
+        run: python -c "import sys; print(sys.version)"
+      - name: Build
+        run: python -m pip install -e .
+      - name: pytest
+        run: |
+            python -m pip install pytest
+            pytest -v
